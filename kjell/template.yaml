@@ -5,6 +5,10 @@ Description: >
 
   Sample SAM Template for kjell
 
+Parameters:
+  BucketName:
+    Type: String
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -16,10 +20,14 @@ Resources:
   Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: "kjellsimgebucket"
+      BucketName: !Ref BucketName
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    DependsOn: Bucket
     Properties:
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref BucketName
       CodeUri: hello_world/
       Handler: app.lambda_handler
       Runtime: python3.9
@@ -27,6 +35,7 @@ Resources:
         - x86_64
       Policies:
         - AmazonRekognitionFullAccess
+        - AmazonS3ReadOnlyAccess
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
