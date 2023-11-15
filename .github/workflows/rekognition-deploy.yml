@@ -24,4 +24,7 @@ jobs:
         working-directory: kjell/
         run: | 
           sam build --use-container
-          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name ${{ vars.STACK_NAME }} --parameter-overrides BucketName=${{ vars.BUCKET_NAME }}
+      - name: deploy
+        if: github.ref_name == 'main'
+        working-directory: kjell/
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name ${{ vars.STACK_NAME }} --parameter-overrides BucketName=${{ vars.BUCKET_NAME }}
