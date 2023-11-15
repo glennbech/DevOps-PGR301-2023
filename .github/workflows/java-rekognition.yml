@@ -21,6 +21,6 @@ jobs:
         run: |
           aws ecr get-login-password | docker login -u AWS --password-stdin ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}
           rev=$(git rev-parse --short HEAD)
-          docker tag ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}:latest
+          docker tag ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}:$rev ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}:latest
           docker push ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}:$rev
           docker push ${{ vars.AWS_ACCOUNT_URL }}/${{ vars.AWS_ECR }}:latest
