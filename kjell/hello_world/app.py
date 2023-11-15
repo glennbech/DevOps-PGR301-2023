@@ -12,13 +12,14 @@ import os
 #
 # Hilsen Kjell
 
-s3_client = boto3.client('s3', region_name='eu-west-1')
-rekognition_client = boto3.client('rekognition', region_name='eu-west-1')
+# Variables set by environmet
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+AWS_REGION = os.getenv("AWS_REGION", "eu-west-1")
+
+s3_client = boto3.client('s3', region_name=AWS_REGION)
+rekognition_client = boto3.client('rekognition', region_name=AWS_REGION)
 
 # Oppgave 1A
-print("Env is " + os.environ.get("BUCKET_NAME", "no env found"))
-BUCKET_NAME = os.environ.get("BUCKET_NAME")
-
 def lambda_handler(event, context):
 
     # List all objects in the S3 bucket
