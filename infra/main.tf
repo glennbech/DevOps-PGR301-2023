@@ -5,6 +5,12 @@ terraform {
       version = "5.24.0"
     }
   }
+  # The bucket referanced here needs to alreay exist
+  backend "s3" {
+    bucket = "tf-state-2015"
+    key = "2015/apr-service.state"
+    region = "eu-west-1"
+  }
 }
 
 provider "aws" {
