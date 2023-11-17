@@ -25,4 +25,5 @@ jobs:
       - name: deploy
         if: github.ref_name == 'main'
         working-directory: kjell/
-        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM --resolve-s3 --disable-rollback --stack-name ${{ vars.STACK_NAME }} --parameter-overrides BucketName=${{ vars.BUCKET_NAME }}
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM --resolve-s3 --stack-name ${{ vars.STACK_NAME }} --parameter-overrides BucketName=${{ vars.BUCKET_NAME }}
+
