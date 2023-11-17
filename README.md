@@ -19,7 +19,8 @@ repository variables (ligger på samme sted som repository secrets)
 | AWS_ACCOUNT_ID | The account url for ecr repositories e.g `<this part>.dkr.ecr.eu-west-1.amazonaws.com` |
 | AWS_ECR         | The name of the ECR repository                                                                                           |
 
-> [!WARNING] The backend in the `infra/` code needs to be configured to run correctly
+> [!WARNING] 
+> The backend in the `infra/` code needs to be configured to run correctly
 > 
 > Changes needed:
 > - `bucket` Is used to store the terraform state. Create a new bucket or use an existing one intended for this
