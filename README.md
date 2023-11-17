@@ -16,8 +16,15 @@ repository variables (ligger på samme sted som repository secrets)
 | AWS_REGION      | AWS region for IAM bruker & Cloudformation ️distribusjonen                                 |
 | BUCKET_NAME     | Hva S3 bøtten som skal lagre bildene skal hete                                             |
 | STACK_NAME      | Navn på CloudFormation stacken                                                             |
-| AWS_ACCOUNT_URL | The account url for ecr repositories e.g `<account_number>.dkr.ecr.<region>.amazonaws.com` |
+| AWS_ACCOUNT_ID | The account url for ecr repositories e.g `<this part>.dkr.ecr.eu-west-1.amazonaws.com` |
 | AWS_ECR         | The name of the ECR repository                                                                                           |
+
+> [!WARNING] The backend in the `infra/` code needs to be configured to run correctly
+> 
+> Changes needed:
+> - `bucket` Is used to store the terraform state. Create a new bucket or use an existing one intended for this
+> - `key` Is the file path in the bucket for the state
+> - `region` the aws region of the bucket
 
 ## `Kjell`
 
