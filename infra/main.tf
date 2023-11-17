@@ -1,30 +1,21 @@
-resource "aws_apprunner_service" "service" {
-  service_name = "kjell-is-king"
-
-  instance_configuration {
-    instance_role_arn = aws_iam_role.role_for_apprunner_service.arn
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.24.0"
+    }
   }
-
-  source_configuration {
-    authentication_configuration {
-      access_role_arn = "arn:aws:iam::244530008913:role/service-role/AppRunnerECRAccessRole"
-    }
-    image_repository {
-      image_configuration {
-        port = "8080"
-      }
-      image_identifier      = "244530008913.dkr.ecr.eu-west-1.amazonaws.com/kjell:latest"
-      image_repository_type = "ECR"
-    }
-    auto_deployments_enabled = true
+  # The bucket referanced here needs to alreay exist
+  backend "s3" {
+    bucket = "tf-state-2015"
+    key = "2015/apr-service.state"
+    region = "eu-west-1"
   }
 }
 
-resource "aws_iam_role" "role_for_apprunner_service" {
-  name               = "kjell-role-thingy"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+provider "aws" {
+  region = var.aws_region
 }
-
 
 data "aws_iam_policy_document" "assume_role" {
   statement {
@@ -45,7 +36,7 @@ data "aws_iam_policy_document" "policy" {
     actions   = ["rekognition:*"]
     resources = ["*"]
   }
-  
+
   statement  {
     effect    = "Allow"
     actions   = ["s3:*"]
@@ -59,15 +50,42 @@ data "aws_iam_policy_document" "policy" {
   }
 }
 
+resource "aws_apprunner_service" "service" {
+  service_name = var.service_name
+
+  instance_configuration {
+    instance_role_arn = aws_iam_role.role_for_apprunner_service.arn
+    cpu = "256"
+    memory = "1024"
+  }
+
+  source_configuration {
+    authentication_configuration {
+      access_role_arn = "arn:aws:iam::${var.aws_account_number}:role/service-role/AppRunnerECRAccessRole"
+    }
+    image_repository {
+      image_configuration {
+        port = "8080"
+      }
+      image_identifier      = "${var.aws_account_number}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.ecr_repository}:${var.ecr_tag}"
+      image_repository_type = "ECR"
+    }
+    auto_deployments_enabled = true
+  }
+}
+
+resource "aws_iam_role" "role_for_apprunner_service" {
+  name               = "${var.service_name}-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
 resource "aws_iam_policy" "policy" {
-  name        = "kjell-apr-policy-thingy"
+  name        = "${var.service_name}-apr-policy"
   description = "Policy for apprunner instance I think"
   policy      = data.aws_iam_policy_document.policy.json
 }
-
 
 resource "aws_iam_role_policy_attachment" "attachment" {
   role       = aws_iam_role.role_for_apprunner_service.name
   policy_arn = aws_iam_policy.policy.arn
 }
-
