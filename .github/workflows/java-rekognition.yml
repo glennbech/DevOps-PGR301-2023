@@ -9,7 +9,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: eu-west-1
-      AWS_ECR_URI: ${{ vars.AWS_ACCOUNT_URI }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ vars.AWS_ECR }}
+      AWS_ECR_URI: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ vars.AWS_ECR }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       TF_VAR_service_name: ${{ vars.SERVICE_NAME }}
-      TF_VAR_aws_account_number: ${{ secrets.AWS_ACCOUNT }}
+      TF_VAR_aws_account_number: ${{ secrets.AWS_ACCOUNT_ID }}
       TF_VAR_aws_region: ${{ vars.AWS_REGION }}
       TF_VAR_ecr_repository: ${{ vars.AWS_ECR }}
       # TF_VAR_ecr_tag: ${{ vars.AWS_ECR_TAG }} # Optional, defaults to latest
