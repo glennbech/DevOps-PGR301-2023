@@ -11,28 +11,44 @@ Legg til disse verdiene på som repository secrets
 
 repository variables (ligger på samme sted som repository secrets)
 
-| Variabel        | Skal inneholde                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------ |
-| AWS_REGION      | AWS region for IAM bruker & Cloudformation ️distribusjonen                                 |
-| BUCKET_NAME     | Hva S3 bøtten som skal lagre bildene skal hete                                             |
-| STACK_NAME      | Navn på CloudFormation stacken                                                             |
-| AWS_ACCOUNT_ID | The account url for ecr repositories e.g `<this part>.dkr.ecr.eu-west-1.amazonaws.com` |
-| AWS_ECR         | The name of the ECR repository                                                                                           |
+| Variabel       | Skal inneholde                                                                          |
+| -------------- | --------------------------------------------------------------------------------------- |
+| AWS_REGION     | AWS region for IAM bruker & Cloudformation ️distribusjonen                              |
+| BUCKET_NAME    | Hva S3 bøtten som skal lagre bildene skal hete                                          |
+| STACK_NAME     | Navn på CloudFormation stacken                                                          |
+| AWS_ACCOUNT_ID | AWS konto id for ecr repositories d.v.s `<denne biten>.dkr.ecr.eu-west-1.amazonaws.com` |
+| AWS_ECR        | The name of the ECR repository                                                          |
 
 > [!WARNING] 
-> The backend in the `infra/` code needs to be configured to run correctly
+> Backend-en i `infra/` trenger disse endringene for å fungere:
 > 
-> Changes needed:
-> - `bucket` Is used to store the terraform state. Create a new bucket or use an existing one intended for this
-> - `key` Is the file path in the bucket for the state
-> - `region` the aws region of the bucket
+> - `bucket` brukes for å spore infrastrukturens oppsett. Lag en _bucket_ eller bruk en eksisterende for det formålet
+> - `key` er filnavnet der tilstanden blir lagret i bucket-en
+> - `region` AWS regionen for _bucket_-en
 
 ## `Kjell`
 
-For å teste kjells kode lokalt, bruk disse linjene:
+For å teste koden lokalt, bruk disse linjene:
 
 ```shell
 cd kjell/
 docker build -t kjellpy .
 docker run -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e BUCKET_NAME=kjellsimagebucket kjellpy
 ```
+
+---
+
+## `S3RekognitionApplication`
+
+For å teste koden bruk disse linjene:
+
+```shell
+docker build -t ppe . 
+docker run -p 8080:8080 -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e BUCKET_NAME=kjellsimagebucket ppe
+```
+
+### Telemetri️
+
+- Images scanned
+- Violations found
+- Scan requests
