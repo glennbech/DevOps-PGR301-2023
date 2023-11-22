@@ -9,7 +9,6 @@ import com.example.s3rekognition.TiredClassification;
 import com.example.s3rekognition.PPEClassificationResponse;
 import com.example.s3rekognition.PPEResponse;
 import com.example.s3rekognition.TiredFacesResponse;
-import io.micrometer.core.instrument.Gauge;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
