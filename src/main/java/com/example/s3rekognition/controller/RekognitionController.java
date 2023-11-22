@@ -119,6 +119,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                                     .map(faceDetails -> faceDetails
                                             .getEmotions()
                                             .stream()
+                                            .peek(emotion -> logger.info("Detected " + emotion + " in " + detectFacesRequest.getImage().getS3Object().getName()))
                                             // Tired is not an emotion, so we match against confused or fear instead.
                                             // This really should use its own model trained to find tired faces.
                                             .anyMatch(emotion ->
@@ -127,7 +128,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                                                     emotion.getType().contentEquals(EmotionName.FEAR.name())
                                             )
                                     )
-                                    .filter(isViolation -> isViolation)
+                                    .filter(Boolean::booleanValue)
                                     .mapToInt(v -> 1)
                                     .sum()
                             )
