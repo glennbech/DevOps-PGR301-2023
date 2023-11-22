@@ -5,8 +5,10 @@ import com.amazonaws.services.rekognition.model.*;
 import com.amazonaws.services.rekognition.model.S3Object;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
+import com.example.s3rekognition.TiredClassification;
 import com.example.s3rekognition.PPEClassificationResponse;
 import com.example.s3rekognition.PPEResponse;
+import com.example.s3rekognition.TiredFacesResponse;
 import io.micrometer.core.instrument.Gauge;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +21,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -81,8 +84,15 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         return ResponseEntity.ok(ppeResponse);
     }
 
-    @GetMapping("/are-tired")
-    public boolean areTheyTired(@Value("${bucket.name}") String bucketName) {
+    /**
+     * This endpoint takes an S3 bucket name in as an argument, scans all the
+     * Files in the bucket for tired faces.
+     *
+     * @param bucketName
+     * @return
+     */
+    @GetMapping(value = "/scan-tired", produces = "application/json")
+    public ResponseEntity<TiredFacesResponse> scanForTiredFaces(@RequestParam String bucketName) {
         // List all objects in the S3 bucket
         ListObjectsV2Result imageList = s3Client.listObjectsV2(bucketName);
 
@@ -90,27 +100,41 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         List<S3ObjectSummary> images = imageList.getObjectSummaries();
 
         // Iterate over each object and scan for tiredness by checking if they are confused or scared
-        return images.stream()
-                // Create detectFace requests
+        List<TiredClassification> imageResults = images.stream()
+                //  Create scan requests
                 .map(image -> new DetectFacesRequest()
                         .withImage(new Image()
                                 .withS3Object(new S3Object()
                                         .withBucket(bucketName)
-                                        .withName(image.getKey())))
-                        .withAttributes(Attribute.ALL))
-                // Send requests
-                .map( detectFacesRequest -> {
-                    logger.info("scanning faces in: " + detectFacesRequest.getImage().getS3Object().getName());
-                    return rekognitionClient.detectFaces(detectFacesRequest);
-                })
-                // Reduce faces to a list of emotions
-                .flatMap(result -> result.getFaceDetails().stream())
-                .flatMap(faceDetail -> faceDetail.getEmotions().stream())
-                // Tiredness is found if anyone are confused or scared
-                .anyMatch(emotion -> {
-                    if (emotion.getType().contentEquals(EmotionName.CONFUSED.name())) return true;
-                    else return emotion.getType().contentEquals(EmotionName.FEAR.name());
-                });
+                                        .withName(image.getKey()))
+                        )
+                        .withAttributes(Attribute.ALL)
+                )
+                .map(detectFacesRequest -> {
+                    logger.info("Scanning faces at s3://" + bucketName + "/" + detectFacesRequest.getImage().getS3Object().getName());
+                    DetectFacesResult result = rekognitionClient.detectFaces(detectFacesRequest);
+                    return TiredClassification.builder()
+                            .filename(detectFacesRequest.getImage().getS3Object().getName())
+                            .violationCount(result.getFaceDetails()
+                                    .stream()
+                                    .map(faceDetails -> faceDetails
+                                            .getEmotions()
+                                            .stream()
+                                            // Tired is not an emotion, so we match against confused or fear instead.
+                                            // This really should use its own model trained to find tired faces.
+                                            .anyMatch(emotion ->
+                                                    emotion.getType().contentEquals(EmotionName.CONFUSED.name())
+                                                            ||
+                                                    emotion.getType().contentEquals(EmotionName.FEAR.name())
+                                            )
+                                    )
+                                    .filter(isViolation -> isViolation)
+                                    .mapToInt(v -> 1)
+                                    .sum()
+                            )
+                            .build();
+                }).collect(Collectors.toList());
+        return ResponseEntity.ok(new TiredFacesResponse(bucketName, imageResults));
     }
 
     @PostMapping("/upload-image")
