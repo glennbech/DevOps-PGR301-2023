@@ -119,6 +119,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                                     .map(faceDetails -> faceDetails
                                             .getEmotions()
                                             .stream()
+                                            .filter(emotion -> emotion.getConfidence() >= 80f) // Confidence threshold could be a configuration maybe?
                                             .peek(emotion -> logger.info("Detected " + emotion + " in " + detectFacesRequest.getImage().getS3Object().getName()))
                                             // Tired is not an emotion, so we match against confused or fear instead.
                                             // This really should use its own model trained to find tired faces.
