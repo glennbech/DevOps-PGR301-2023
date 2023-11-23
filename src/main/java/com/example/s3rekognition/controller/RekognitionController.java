@@ -139,11 +139,6 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         return ResponseEntity.ok(new TiredFacesResponse(bucketName, imageResults));
     }
 
-    @PostMapping("/upload-image")
-    public void uploadToBucket(@RequestBody File file, @Value("${bucket.name}") String bucketName) {
-            logger.info("Uploading to s3 bucket: " + file.getName());
-            s3Client.putObject(bucketName, file.getName(), file);
-    }
 
     /**
      * Detects if the image has a protective gear violation for the FACE bodypart-
