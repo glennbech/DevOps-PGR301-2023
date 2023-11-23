@@ -109,8 +109,8 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                         )
                         .withAttributes(Attribute.ALL)
                 )
+                .peek(detectFacesRequest -> logger.info("Detecting faces in s3://" + bucketName + "/" + detectFacesRequest.getImage().getS3Object().getName()))
                 .map(detectFacesRequest -> {
-                    logger.info("Scanning faces at s3://" + bucketName + "/" + detectFacesRequest.getImage().getS3Object().getName());
                     DetectFacesResult result = rekognitionClient.detectFaces(detectFacesRequest);
                     return TiredClassification.builder()
                             .filename(detectFacesRequest.getImage().getS3Object().getName())
@@ -133,6 +133,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                                     .mapToInt(v -> 1)
                                     .sum()
                             )
+                            .personCount(result.getFaceDetails().size())
                             .build();
                 }).collect(Collectors.toList());
         return ResponseEntity.ok(new TiredFacesResponse(bucketName, imageResults));
