@@ -40,5 +40,4 @@ public class S3RekognitionApplication {
                 .withRegion(aws_region)
                 .build();
     }
-
 }
