@@ -64,9 +64,23 @@ docker run -p 8080:8080 -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e
 
 ### Telemetri
 
-- Images scanned
-- Violations found
-- Scan requests
+- Image
+	- Total scans
+	- Average scans per
+		- 10m? 
+		- 1h?
+	- Uploads
+		- Total uploads
+		- Upload rate
+			- 1h?
+- Violations detected
+	- Total
+		- Total ppe
+		- Total exhaustion
+	- Rate
+- People detected
+	- Total
+	- Rate
 
 ## Drøft
 
