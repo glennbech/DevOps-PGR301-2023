@@ -36,3 +36,18 @@ cd kjell/
 docker build -t kjellpy .
 docker run -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e BUCKET_NAME=kjellsimagebucket kjellpy
 ```
+
+## S3RekognitionApplication
+
+| Method | Endpoint      | Description                       |
+| ------ | ------------- | --------------------------------- |
+| GET    | /scan-ppe     | Se etter verneutstyr i S3 bildene |
+| GET    | /scan-tired   | Se etter trøtte folk i S3 bildene |
+| POST   | /upload-image | Laster opp bilder til S3 bøtten   |
+
+### Ekstra Endpoints
+
+- `/upload-image`
+	- Ett simpelt endpoint for å laste opp bilder.
+- `/scan-tired`
+	- Skanner etter folk som ser trøtte ut. Helsepersonell som er trøtte har større sjanse i å oppleve enn ulykke, derfor skal denne kunne varsle om noen er trøtt. Rekognition har ingen trøtthet parameter så den bruker forvirret/redd men det burde videre blitt brukt en egen trent modell for dette.

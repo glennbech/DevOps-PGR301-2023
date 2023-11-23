@@ -2,23 +2,29 @@ package com.example.s3rekognition.controller;
 
 import com.amazonaws.services.rekognition.AmazonRekognition;
 import com.amazonaws.services.rekognition.model.*;
+import com.amazonaws.services.rekognition.model.S3Object;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.*;
+import com.example.s3rekognition.TiredClassification;
 import com.example.s3rekognition.PPEClassificationResponse;
 import com.example.s3rekognition.PPEResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.s3rekognition.TiredFacesResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 @RestController
+@RequiredArgsConstructor
 public class RekognitionController implements ApplicationListener<ApplicationReadyEvent> {
 
     private final AmazonS3 s3Client;
@@ -26,12 +32,6 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
     private final AmazonRekognition rekognitionClient;
 
     private static final Logger logger = Logger.getLogger(RekognitionController.class.getName());
-
-    @Autowired
-    public RekognitionController(AmazonS3 s3Client, AmazonRekognition rekognitionClient) {
-        this.s3Client = s3Client;
-        this.rekognitionClient = rekognitionClient;
-    }
 
     /**
      * This endpoint takes an S3 bucket name in as an argument, scans all the
@@ -81,6 +81,68 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         }
         PPEResponse ppeResponse = new PPEResponse(bucketName, classificationResponses);
         return ResponseEntity.ok(ppeResponse);
+    }
+
+    /**
+     * This endpoint takes an S3 bucket name in as an argument, scans all the
+     * Files in the bucket for tired faces.
+     *
+     * @param bucketName
+     * @return
+     */
+    @GetMapping(value = "/scan-tired", produces = "application/json")
+    public ResponseEntity<TiredFacesResponse> scanForTiredFaces(@RequestParam String bucketName) {
+        // List all objects in the S3 bucket
+        ListObjectsV2Result imageList = s3Client.listObjectsV2(bucketName);
+
+        // This is all the images in the bucket
+        List<S3ObjectSummary> images = imageList.getObjectSummaries();
+
+        // Iterate over each object and scan for tiredness by checking if they are confused or scared
+        List<TiredClassification> imageResults = images.stream()
+                //  Create scan requests
+                .map(image -> new DetectFacesRequest()
+                        .withImage(new Image()
+                                .withS3Object(new S3Object()
+                                        .withBucket(bucketName)
+                                        .withName(image.getKey()))
+                        )
+                        .withAttributes(Attribute.ALL)
+                )
+                .peek(detectFacesRequest -> logger.info("Detecting faces in s3://" + bucketName + "/" + detectFacesRequest.getImage().getS3Object().getName()))
+                .map(detectFacesRequest -> {
+                    DetectFacesResult result = rekognitionClient.detectFaces(detectFacesRequest);
+                    return TiredClassification.builder()
+                            .filename(detectFacesRequest.getImage().getS3Object().getName())
+                            .violationCount(result.getFaceDetails()
+                                    .stream()
+                                    .map(faceDetails -> faceDetails
+                                            .getEmotions()
+                                            .stream()
+                                            .filter(emotion -> emotion.getConfidence() >= 80f) // Confidence threshold could be a configuration maybe?
+                                            .peek(emotion -> logger.info("Detected " + emotion + " in " + detectFacesRequest.getImage().getS3Object().getName()))
+                                            // Tired is not an emotion, so we match against confused or fear instead.
+                                            // This really should use its own model trained to find tired faces.
+                                            .anyMatch(emotion ->
+                                                    emotion.getType().contentEquals(EmotionName.CONFUSED.name())
+                                                            ||
+                                                    emotion.getType().contentEquals(EmotionName.FEAR.name())
+                                            )
+                                    )
+                                    .filter(Boolean::booleanValue)
+                                    .mapToInt(v -> 1)
+                                    .sum()
+                            )
+                            .personCount(result.getFaceDetails().size())
+                            .build();
+                }).collect(Collectors.toList());
+        return ResponseEntity.ok(new TiredFacesResponse(bucketName, imageResults));
+    }
+
+    @PostMapping("/upload-image")
+    public void uploadToBucket(@RequestBody File file, @Value("${bucket.name}") String bucketName) {
+            logger.info("Uploading to s3 bucket: " + file.getName());
+            s3Client.putObject(bucketName, file.getName(), file);
     }
 
     /**
