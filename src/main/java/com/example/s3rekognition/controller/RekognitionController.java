@@ -48,37 +48,37 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         // List all objects in the S3 bucket
         ListObjectsV2Result imageList = s3Client.listObjectsV2(bucketName);
 
-        // This will hold all of our classifications
-        List<PPEClassificationResponse> classificationResponses = new ArrayList<>();
-
         // This is all the images in the bucket
         List<S3ObjectSummary> images = imageList.getObjectSummaries();
 
-        // Iterate over each object and scan for PPE
-        for (S3ObjectSummary image : images) {
-            logger.info("scanning " + image.getKey());
-
-            // This is where the magic happens, use AWS rekognition to detect PPE
-            DetectProtectiveEquipmentRequest request = new DetectProtectiveEquipmentRequest()
+        List<PPEClassificationResponse> classificationResponses = images.stream()
+                .map(image -> new DetectProtectiveEquipmentRequest()
                     .withImage(new Image()
                             .withS3Object(new S3Object()
                                     .withBucket(bucketName)
                                     .withName(image.getKey())))
                     .withSummarizationAttributes(new ProtectiveEquipmentSummarizationAttributes()
                             .withMinConfidence(80f)
-                            .withRequiredEquipmentTypes("FACE_COVER"));
+                            .withRequiredEquipmentTypes("FACE_COVER"))
+                )
+                .peek(request -> logger.info("Detecting people in s3://" + bucketName + "/" + request.getImage().getS3Object().getName()))
+                .peek(request -> meterRegistry.counter("image scans", "scan type", "ppe").increment())
+                .map(request -> {
+                    DetectProtectiveEquipmentResult result = rekognitionClient.detectProtectiveEquipment(request);
+                    return new PPEClassificationResponse(
+                            request.getImage().getS3Object().getName(),
+                            result.getPersons().size(),
+                            result.getSummary()
+                                    .getPersonsWithRequiredEquipment()
+                                    .isEmpty()
+                    );
+                })
+                .peek(response -> {
+                    if (response.isViolation()) meterRegistry.counter("detected violations", "scan type", "ppe").increment();
+                })
+                .collect(Collectors.toList());
 
-            DetectProtectiveEquipmentResult result = rekognitionClient.detectProtectiveEquipment(request);
-
-            // If any person on an image lacks PPE on the face, it's a violation of regulations
-            boolean violation = isViolation(result);
-
-            logger.info("scanning " + image.getKey() + ", violation result " + violation);
-            // Categorize the current image as a violation or not.
-            int personCount = result.getPersons().size();
-            PPEClassificationResponse classification = new PPEClassificationResponse(image.getKey(), personCount, violation);
-            classificationResponses.add(classification);
-        }
+        // Iterate over each object and scan for PPE
         PPEResponse ppeResponse = new PPEResponse(bucketName, classificationResponses);
         return ResponseEntity.ok(ppeResponse);
     }
