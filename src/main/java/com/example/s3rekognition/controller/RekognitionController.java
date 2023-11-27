@@ -9,15 +9,13 @@ import com.example.s3rekognition.TiredClassification;
 import com.example.s3rekognition.PPEClassificationResponse;
 import com.example.s3rekognition.PPEResponse;
 import com.example.s3rekognition.TiredFacesResponse;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -30,6 +28,8 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
     private final AmazonS3 s3Client;
 
     private final AmazonRekognition rekognitionClient;
+
+    private final MeterRegistry meterRegistry;
 
     private static final Logger logger = Logger.getLogger(RekognitionController.class.getName());
 
@@ -48,37 +48,37 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
         // List all objects in the S3 bucket
         ListObjectsV2Result imageList = s3Client.listObjectsV2(bucketName);
 
-        // This will hold all of our classifications
-        List<PPEClassificationResponse> classificationResponses = new ArrayList<>();
-
         // This is all the images in the bucket
         List<S3ObjectSummary> images = imageList.getObjectSummaries();
 
-        // Iterate over each object and scan for PPE
-        for (S3ObjectSummary image : images) {
-            logger.info("scanning " + image.getKey());
-
-            // This is where the magic happens, use AWS rekognition to detect PPE
-            DetectProtectiveEquipmentRequest request = new DetectProtectiveEquipmentRequest()
+        List<PPEClassificationResponse> classificationResponses = images.stream()
+                .map(image -> new DetectProtectiveEquipmentRequest()
                     .withImage(new Image()
                             .withS3Object(new S3Object()
                                     .withBucket(bucketName)
                                     .withName(image.getKey())))
                     .withSummarizationAttributes(new ProtectiveEquipmentSummarizationAttributes()
                             .withMinConfidence(80f)
-                            .withRequiredEquipmentTypes("FACE_COVER"));
+                            .withRequiredEquipmentTypes("FACE_COVER"))
+                )
+                .peek(request -> logger.info("Detecting people in s3://" + bucketName + "/" + request.getImage().getS3Object().getName()))
+                .peek(request -> meterRegistry.counter("image scans", "scan type", "ppe").increment())
+                .map(request -> {
+                    DetectProtectiveEquipmentResult result = rekognitionClient.detectProtectiveEquipment(request);
+                    return new PPEClassificationResponse(
+                            request.getImage().getS3Object().getName(),
+                            result.getPersons().size(),
+                            result.getSummary()
+                                    .getPersonsWithRequiredEquipment()
+                                    .isEmpty()
+                    );
+                })
+                .peek(response -> {
+                    if (response.isViolation()) meterRegistry.counter("detected violations", "scan type", "ppe").increment();
+                })
+                .collect(Collectors.toList());
 
-            DetectProtectiveEquipmentResult result = rekognitionClient.detectProtectiveEquipment(request);
-
-            // If any person on an image lacks PPE on the face, it's a violation of regulations
-            boolean violation = isViolation(result);
-
-            logger.info("scanning " + image.getKey() + ", violation result " + violation);
-            // Categorize the current image as a violation or not.
-            int personCount = result.getPersons().size();
-            PPEClassificationResponse classification = new PPEClassificationResponse(image.getKey(), personCount, violation);
-            classificationResponses.add(classification);
-        }
+        // Iterate over each object and scan for PPE
         PPEResponse ppeResponse = new PPEResponse(bucketName, classificationResponses);
         return ResponseEntity.ok(ppeResponse);
     }
@@ -88,7 +88,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
      * Files in the bucket for tired faces.
      *
      * @param bucketName
-     * @return
+     * @return a http response with a json list with scan results
      */
     @GetMapping(value = "/scan-tired", produces = "application/json")
     public ResponseEntity<TiredFacesResponse> scanForTiredFaces(@RequestParam String bucketName) {
@@ -109,41 +109,40 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                         )
                         .withAttributes(Attribute.ALL)
                 )
-                .peek(detectFacesRequest -> logger.info("Detecting faces in s3://" + bucketName + "/" + detectFacesRequest.getImage().getS3Object().getName()))
-                .map(detectFacesRequest -> {
-                    DetectFacesResult result = rekognitionClient.detectFaces(detectFacesRequest);
+                .peek(request -> logger.info("Detecting faces in s3://" + bucketName + "/" + request.getImage().getS3Object().getName()))
+                .map(request -> {
+                    DetectFacesResult result = rekognitionClient.detectFaces(request);
+                    meterRegistry.counter("image scans", "scan type", "exhaustion").increment();
                     return TiredClassification.builder()
-                            .filename(detectFacesRequest.getImage().getS3Object().getName())
-                            .violationCount(result.getFaceDetails()
+                            .filename(request.getImage().getS3Object().getName())
+                            .violationCount((int) result.getFaceDetails()
                                     .stream()
-                                    .map(faceDetails -> faceDetails
-                                            .getEmotions()
+                                    .peek(face -> meterRegistry.counter("detected people", "scan type", "exhaustion").increment())
+                                    .map(FaceDetail::getEmotions)
+                                    .filter(emotions -> emotions
                                             .stream()
-                                            .filter(emotion -> emotion.getConfidence() >= 80f) // Confidence threshold could be a configuration maybe?
-                                            .peek(emotion -> logger.info("Detected " + emotion + " in " + detectFacesRequest.getImage().getS3Object().getName()))
                                             // Tired is not an emotion, so we match against confused or fear instead.
                                             // This really should use its own model trained to find tired faces.
-                                            .anyMatch(emotion ->
+                                            .filter(emotion ->
                                                     emotion.getType().contentEquals(EmotionName.CONFUSED.name())
                                                             ||
-                                                    emotion.getType().contentEquals(EmotionName.FEAR.name())
+                                                            emotion.getType().contentEquals(EmotionName.FEAR.name())
                                             )
+                                            .peek(emotion -> meterRegistry.summary("detection confidence", "scan type", "exhaustion").record(emotion.getConfidence()))
+                                            .filter(emotion -> emotion.getConfidence() >= 80f) // Confidence threshold could be a configuration maybe?
+                                            .peek(emotion -> logger.info("Detected " + emotion + " in " + request.getImage().getS3Object().getName()))
+                                            .count() != 0
                                     )
-                                    .filter(Boolean::booleanValue)
-                                    .mapToInt(v -> 1)
-                                    .sum()
+                                    .peek(detail -> meterRegistry.counter("detected violations", "scan type", "exhaustion").increment())
+                                    .count()
                             )
                             .personCount(result.getFaceDetails().size())
                             .build();
-                }).collect(Collectors.toList());
+                })
+                .collect(Collectors.toList());
         return ResponseEntity.ok(new TiredFacesResponse(bucketName, imageResults));
     }
 
-    @PostMapping("/upload-image")
-    public void uploadToBucket(@RequestBody File file, @Value("${bucket.name}") String bucketName) {
-            logger.info("Uploading to s3 bucket: " + file.getName());
-            s3Client.putObject(bucketName, file.getName(), file);
-    }
 
     /**
      * Detects if the image has a protective gear violation for the FACE bodypart-
