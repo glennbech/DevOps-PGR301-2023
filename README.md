@@ -50,7 +50,7 @@ docker run -p 8080:8080 -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e
 ## S3RekognitionApplication
 
 | Method | Endpoint      | Description                       |
-|--------|---------------|-----------------------------------|
+| ------ | ------------- | --------------------------------- |
 | GET    | /scan-ppe     | Se etter verneutstyr i S3 bildene |
 | GET    | /scan-tired   | Se etter trøtte folk i S3 bildene |
 | POST   | /upload-image | Laster opp bilder til S3 bøtten   |
@@ -62,22 +62,23 @@ docker run -p 8080:8080 -e AWS_ACCESS_KEY_ID=XXX -e AWS_SECRET_ACCESS_KEY=YYY -e
 - `/scan-tired`
 	- Skanner etter folk som ser trøtte ut. Helsepersonell som er trøtte har større sjanse i å oppleve enn ulykke, derfor skal denne kunne varsle om noen er trøtt. Rekognition har ingen trøtthet parameter så den bruker forvirret/redd men det burde videre blitt brukt en egen trent modell for dette.
 
-### Telemetri
+### Telemetri️
 
-- Image
-	- Total scans
-	- Average scans per
-		- 10m? 
-		- 1h?
-	- Uploads
-		- Total uploads
-		- Upload rate
-			- 1h?
-- Violations detected
-	- Total
-		- Total ppe
-		- Total exhaustion
-	- Rate
+Hvor mye tjenesten blir brukt blir brukt
+- Total scans
+- Average scans per
+	- 10m? 
+	- 1h?
+- Uploads
+	- Total uploads
+	- Upload rate 
+
+Hvor effektiv er tjenesten til å
+- Violations
+	- detected
+		- ppe
+		- exhaustion
+	- detection confidence level //TODO
 - People detected
 	- Total
 	- Rate
