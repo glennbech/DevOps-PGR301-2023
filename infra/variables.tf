@@ -21,3 +21,7 @@ variable "ecr_tag" {
   type = string
   default = "latest"
 }
+
+variable "cloudwatch_namespace" {
+  type = string
+}

@@ -74,6 +74,7 @@ public class RekognitionController implements ApplicationListener<ApplicationRea
                     );
                 })
                 .peek(response -> {
+                    meterRegistry.counter("detected people", "scan type", "ppe").increment(response.getPersonCount());
                     if (response.isViolation()) meterRegistry.counter("detected violations", "scan type", "ppe").increment();
                 })
                 .collect(Collectors.toList());
