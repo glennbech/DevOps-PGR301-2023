@@ -21,7 +21,7 @@ resource "aws_cloudwatch_dashboard" "main" {
             "properties": {
                 "metrics": [
                     [ { "expression": "SELECT SUM(\"detected people.count\") FROM SCHEMA(\"${var.cloudwatch_namespace}\", \"scan type\")", "label": "Total", "id": "q1"} ],
-                    [ "${var.cloudwatch_namespace}", "detected people.count", "scan type", "ppe", { "id": "m1", "region": \"${var.aws_region}\" } ],
+                    [ "${var.cloudwatch_namespace}", "detected people.count", "scan type", "ppe", { "id": "m1", "region": "${var.aws_region}" } ],
                     [ "${var.cloudwatch_namespace}", "detected people.count", "scan type", "exhaustion", { "id": "m2", "region": "${var.aws_region}" } ]
                 ],
                 "view": "timeSeries",
