@@ -11,13 +11,14 @@ Legg til disse verdiene på som repository secrets
 
 repository variables (ligger på samme sted som repository secrets)
 
-| Variabel       | Skal inneholde                                                                          |
-| -------------- | --------------------------------------------------------------------------------------- |
-| AWS_REGION     | AWS region for IAM bruker & Cloudformation ️distribusjonen                              |
-| BUCKET_NAME    | Hva S3 bøtten som skal lagre bildene skal hete                                          |
-| STACK_NAME     | Navn på CloudFormation stacken                                                          |
-| AWS_ACCOUNT_ID | AWS konto id for ecr repositories d.v.s `<denne biten>.dkr.ecr.eu-west-1.amazonaws.com` |
-| AWS_ECR        | The name of the ECR repository                                                          |
+| Variabel             | Skal inneholde                                                                          |
+|----------------------|-----------------------------------------------------------------------------------------|
+| AWS_REGION           | AWS region for IAM bruker & Cloudformation ️distribusjonen                              |
+| BUCKET_NAME          | Hva S3 bøtten som skal lagre bildene skal hete                                          |
+| STACK_NAME           | Navn på CloudFormation stacken                                                          |
+| AWS_ACCOUNT_ID       | AWS konto id for ecr repositories d.v.s `<denne biten>.dkr.ecr.eu-west-1.amazonaws.com` |
+| AWS_ECR              | The name of the ECR repository                                                          |
+| CLOUDWATCH_NAMESPACE | Where all the metrics are sendt too                                                     |
 
 > [!WARNING] 
 > Backend-en i `infra/` trenger disse endringene for å fungere:
@@ -85,7 +86,7 @@ Hvor effektiv er tjenesten til å
 
 ## Drøft
 
-### A. Hva er _kontinuerlig integrasjon_ (CI) er?
+### A. Hva Er _kontinuerlig integrasjon_ (CI) Er?
 
 Kontinuerlig integrasjon referer til prosessen for hyppig oppdatering av kodebasen og automatisk prosesser for å sikre at endringene er kompatible. 
 
@@ -103,7 +104,7 @@ Ett praktisk eksempel for et prosjekt i GitHub med 4 utviklere:
 - Automatiske tester er vellykket og endringene merget i main
 - Utvikler 4 er ferdig med sin issue og pusher koden sin til main
 
-### B. Sammenligning av Scrum/Smidig og DevOps fra et utvikler perspektiv
+### B. Sammenligning Av Scrum/Smidig Og DevOps Fra Et Utvikler Perspektiv
 
 1. **Scrum/Smidig Metodikk**
    Scrum metodiken baserer seg på rask iterativ utvikling av både prosjekt miljø og produktet. Scrum deler opp prosjektet fremgang gjennom _sprinter_, utviklings tidsenhet, der slutten av en sprint skal kunne levere ett resultat som kan presenteres og vurderes. Denne prosessen kan sammelignes med at kode endringer i DevOps skal kunne integreres og testes så fort som mulig.

@@ -38,6 +38,7 @@ jobs:
 
       TF_VAR_service_name: ${{ vars.SERVICE_NAME }}
       TF_VAR_aws_account_number: ${{ vars.AWS_ACCOUNT_ID }}
+      TF_VAR_cloudwatch_namespace: ${{ vars.CLOUDWATCH_NAMESPACE }}
       TF_VAR_aws_region: ${{ vars.AWS_REGION }}
       TF_VAR_ecr_repository: ${{ vars.AWS_ECR }}
       # TF_VAR_ecr_tag: ${{ vars.AWS_ECR_TAG }} # Optional, defaults to latest
