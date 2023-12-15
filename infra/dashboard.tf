@@ -1,5 +1,5 @@
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = var.service_name
+  dashboard_name = "2015dahs"
   dashboard_body = <<DASHBOARD
 {
     "widgets": [
