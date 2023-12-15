@@ -8,7 +8,7 @@ terraform {
   # The bucket referanced here needs to alreay exist
   backend "s3" {
     bucket = "tf-state-2015"
-    key = "2015/apr-service.state"
+    key = "2015/apr-service-sensur.state"
     region = "eu-west-1"
   }
 }
